@@ -1,0 +1,9 @@
+name: NPCTutorial
+main: me.chickenstyle.tutorial.Main
+description: coul!
+api-version: 1.15
+version: 1.0
+author: ChickenStyle
+commands:
+  test:
+    description: command to move between worlds

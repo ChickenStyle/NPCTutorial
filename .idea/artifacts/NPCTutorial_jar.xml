@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="NPCTutorial:jar">
+    <output-path>$PROJECT_DIR$/../../../../Test Servers/Spigot 1.15.2/plugins</output-path>
+    <root id="archive" name="NPCTutorial.jar">
+      <element id="module-output" name="NPCTutorial" />
+    </root>
+  </artifact>
+</component>
