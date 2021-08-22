@@ -157,21 +157,10 @@ public class NPCHandler {
 
     public static Listener getListener() {
         return new Listener() {
-            @EventHandler
-            public void onPlayerJoin(PlayerJoinEvent e) {
-                new PacketReader().inject(e.getPlayer());
-                NPCHandler.getInstance().showNPCSOnJoin(e.getPlayer());
-
-            }
 
             @EventHandler
             public void onPlayerRespawn(PlayerRespawnEvent e) {
                 NPCHandler.getInstance().showNPCSOnJoin(e.getPlayer());
-            }
-
-            @EventHandler
-            public void onPlayerQuit(PlayerQuitEvent e) {
-                new PacketReader().uninject(e.getPlayer());
             }
 
         };
