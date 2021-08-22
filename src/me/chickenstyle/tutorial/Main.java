@@ -2,24 +2,20 @@ package me.chickenstyle.tutorial;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class Main extends JavaPlugin implements Listener {
+public class Main extends JavaPlugin {
 
     private static Main instance;
-    private PacketReader packetReader;
+    private static PacketReader packetReader;
 
     @Override
     public void onEnable() {
         instance = this;
         packetReader = new PacketReader();
         getCommand("test").setExecutor(new TestCommand());
-        getServer().getPluginManager().registerEvents(this,this);
+        getServer().getPluginManager().registerEvents(NPCHandler.getListener(),this);
+        getServer().getPluginManager().registerEvents(packetReader.getListener(), this);
 
         validatePlayers();
     }
@@ -27,23 +23,7 @@ public class Main extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         invalidatePlayers();
-    }
-
-    @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent e) {
-        packetReader.inject(e.getPlayer());
-        NPCHandler.getInstance().showNPCSOnJoin(e.getPlayer());
-
-    }
-
-    @EventHandler
-    public void onPlayerRespawn(PlayerRespawnEvent e) {
-        NPCHandler.getInstance().showNPCSOnJoin(e.getPlayer());
-    }
-
-    @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent e) {
-        packetReader.uninject(e.getPlayer());
+        NPCHandler.getInstance().removeAllNPCS();
     }
 
     private void validatePlayers() {

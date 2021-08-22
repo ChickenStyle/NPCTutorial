@@ -2,9 +2,17 @@ package me.chickenstyle.tutorial;
 
 import net.minecraft.server.v1_15_R1.*;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.craftbukkit.v1_15_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -28,26 +36,18 @@ public class NPCHandler {
                 for (NPCMob mob:npcs) {
                     if (mob.getEntity().isAlive()) {
 
-                        update(mob);
+                        update(mob); // moves npc's head
 
-                        double mobX = mob.getEntity().locX();
-                        double mobY = mob.getEntity().locY();
-                        double mobZ = mob.getEntity().locZ();
+                        double getX = mob.getEntity().locX() - mob.getLastX();
+                        double getY = mob.getEntity().locY() - mob.getLastY(); // calculating entity's location relative to the npc
+                        double getZ = mob.getEntity().locZ() - mob.getLastZ();
 
-                        double lastX = mob.getLastX();
-                        double lastY = mob.getLastY();
-                        double lastZ = mob.getLastZ();
+                        move(mob.getNPC(),getX,getY,getZ,mob.getEntity().yaw, mob.getEntity().pitch); // moves the npc to the correct location
 
-                            double getX = mobX - lastX;
-                            double getY = mobY - lastY;
-                            double getZ = mobZ - lastZ;
-
-                            move(mob.getNPC(),getX,getY,getZ,mob.getEntity().yaw, mob.getEntity().pitch);
-
-                            mob.setLastLocation(mobX,mobY,mobZ);
+                        mob.setLastLocation(mob.getEntity().locX(),mob.getEntity().locY(),mob.getEntity().locZ()); //saves the last location
 
                     } else {
-
+                        // if entity dies removes the npc
                         mob.getNPC().damageEntity(DamageSource.GENERIC,mob.getNPC().getMaxHealth());
                         removeNPCPacket(mob.getNPC());
                         mobsToRemove.add(mob);
@@ -90,7 +90,15 @@ public class NPCHandler {
         npcs.add(mob);
     }
 
-    public void showNPCSOnJoin(Player player) {
+    public void removeAllNPCS() {
+        for (NPCMob mob : npcs) {
+            mob.getEntity().killEntity();
+            mob.getNPC().damageEntity(DamageSource.GENERIC,mob.getNPC().getMaxHealth());
+            removeNPCPacket(mob.getNPC());
+        }
+    }
+
+    private void showNPCSOnJoin(Player player) {
         new BukkitRunnable() {
 
             @Override
@@ -109,10 +117,10 @@ public class NPCHandler {
         PlayerConnection connection = ((CraftPlayer) player).getHandle().playerConnection;
         connection.sendPacket(new PacketPlayOutPlayerInfo(PacketPlayOutPlayerInfo.EnumPlayerInfoAction.ADD_PLAYER,npc));
         connection.sendPacket(new PacketPlayOutNamedEntitySpawn(npc));
-        connection.sendPacket(new PacketPlayOutEntityHeadRotation(npc,(byte)(mob.getEntity().yaw * 256/360)));
+        connection.sendPacket(new PacketPlayOutEntityHeadRotation(npc,(byte)(mob.getEntity().yaw * 256/360))); //shows the npc and removes the entity
         connection.sendPacket(new PacketPlayOutEntityDestroy(entity.getId()));
 
-        for (EnumItemSlot slot:EnumItemSlot.values()) {
+        for (EnumItemSlot slot:EnumItemSlot.values()) { // applies all the cosmetic armor and items
             if (npc.getEquipment(slot).getItem() != Item.getById(0)) {
                 connection.sendPacket(new PacketPlayOutEntityEquipment(npc.getId(),slot, npc.getEquipment(slot)));
             }
@@ -145,6 +153,28 @@ public class NPCHandler {
     public static NPCHandler getInstance() {
         instance = instance == null ? new NPCHandler() : instance;
         return instance;
+    }
+
+    public static Listener getListener() {
+        return new Listener() {
+            @EventHandler
+            public void onPlayerJoin(PlayerJoinEvent e) {
+                new PacketReader().inject(e.getPlayer());
+                NPCHandler.getInstance().showNPCSOnJoin(e.getPlayer());
+
+            }
+
+            @EventHandler
+            public void onPlayerRespawn(PlayerRespawnEvent e) {
+                NPCHandler.getInstance().showNPCSOnJoin(e.getPlayer());
+            }
+
+            @EventHandler
+            public void onPlayerQuit(PlayerQuitEvent e) {
+                new PacketReader().uninject(e.getPlayer());
+            }
+
+        };
     }
 
 }

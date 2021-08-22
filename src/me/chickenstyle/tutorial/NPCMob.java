@@ -11,7 +11,6 @@ import org.bukkit.craftbukkit.v1_15_R1.CraftServer;
 import org.bukkit.entity.Player;
 
 import java.io.InputStreamReader;
-import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.UUID;
 
@@ -47,14 +46,6 @@ public abstract class NPCMob{
 
         PlayerInteractManager manager = new PlayerInteractManager(world);
 
-        try {
-            Field gField = PlayerInteractManager.class.getDeclaredField("gamemode");
-            gField.setAccessible(true);
-            gField.set(manager,EnumGamemode.SURVIVAL);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            e.printStackTrace();
-        }
-
         EntityPlayer npc = new EntityPlayer(server,world,profile,manager);
 
         double x = entity.locX();
@@ -67,13 +58,12 @@ public abstract class NPCMob{
 
         npc.setLocation(x,y,z,yaw,pitch);
 
-
         profile.getProperties().put("textures",new Property("textures",skin[0],skin[1]));
 
         return npc;
     }
 
-    private String[] getSkin(String name) {
+    private static String[] getSkin(String name) { // returns the skin in array ["texture",""signature"]
         try {
             URL url = new URL("https://api.mojang.com/users/profiles/minecraft/" + name);
             InputStreamReader reader = new InputStreamReader(url.openStream());

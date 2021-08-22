@@ -8,6 +8,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.v1_15_R1.entity.CraftPlayer;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -28,9 +32,23 @@ public class PacketReader {
         channel.pipeline().addAfter("decoder", "PacketInjector", new MessageToMessageDecoder<PacketPlayInUseEntity>() {
 
             @Override
-            protected void decode(ChannelHandlerContext channel, PacketPlayInUseEntity packet, List<Object> arg) throws Exception {
+            protected void decode(ChannelHandlerContext channel, PacketPlayInUseEntity packet, List<Object> arg) {
                 arg.add(packet);
-                readPacket(player, packet);
+                int id = (int) getValue(packet,"a"); // NPC's id
+
+                for (NPCMob mob : NPCHandler.getInstance().getNPCS()) {
+                    if (mob.getNPC().getId() == id) { // checking if NPCHandler has the interacted npc
+                        Bukkit.getScheduler().scheduleSyncDelayedTask(Main.getInstance(), () -> {
+                            EnumHand hand = packet.c(); // may be null if the action is ATTACK
+                            String action = packet.b().toString(); // Player's interaction type on the npc
+                            player.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(69420D); //Ha ha funny number attack speed
+                            player.saveData();
+                            mob.performInteract(player, action,hand);
+                            player.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(4D);},0); //Setting attack speed back to normal
+                            break;
+                    }
+                }
+
             }
 
         });
@@ -45,23 +63,20 @@ public class PacketReader {
             channel.pipeline().remove("PacketInjector");
     }
 
-    public void readPacket(Player player, Packet<?> packet) {
-        if (packet.getClass().getSimpleName().equalsIgnoreCase("PacketPlayInUseEntity")) {
-            String action = getValue(packet,"action").toString().toUpperCase();
-            int id = (int) getValue(packet, "a");
-            for (NPCMob mob : NPCHandler.getInstance().getNPCS()) {
-                if (mob.getNPC().getId() == id) {
-                    Bukkit.getScheduler().scheduleSyncDelayedTask(Main.getInstance(), () -> {
-                        player.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(69420D);
-                        player.saveData();
-                        mob.performInteract(player, action,(EnumHand) getValue(packet,"d"));
-                        player.getAttribute(Attribute.GENERIC_ATTACK_SPEED).setBaseValue(4D);},0);
+    public Listener getListener() {
+        return new Listener() {
 
-                }
+            @EventHandler
+            public void onPlayerJoin(PlayerJoinEvent e) {
+                inject(e.getPlayer());
             }
 
-        }
+            @EventHandler
+            public void onPlayerQuit(PlayerQuitEvent e) {
+                uninject(e.getPlayer());
+            }
 
+        };
     }
 
     private Object getValue(Object instance, String name) {
